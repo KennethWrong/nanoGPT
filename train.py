@@ -10,7 +10,7 @@ eval_interval = 300
 learning_rate = 1e-3
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 eval_iters = 200
-n_embd = 384
+n_embd = 192
 n_head = 6
 n_layer = 6
 dropout = 0.2
@@ -77,6 +77,7 @@ class Head(nn.Module):
 
         k = self.key(x) # (B, T, C)
         q = self.query(x) # (B, T, C)
+        print(k.shape, q.shape)
 
         wei = q @ k.transpose(-2, -1) * C**-0.5 #(B, T, T)
         wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf')) # (B, T, T)
@@ -85,6 +86,7 @@ class Head(nn.Module):
 
         v = self.value(x) # (B, T, C)
         out = wei @ v # (B, T, T) @ (B, T, C) ---> (B, T, C)
+        print(out.shape, n_embd)
         return out
 
 class MultiHeadAttention(nn.Module):
@@ -189,9 +191,9 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 for iter in range(max_iters):
 
     # every once in a while evaluate the loss on train and val sets
-    # if iter % eval_interval == 0:
-    #     losses = estimate_loss()
-    #     print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
+    if iter % eval_interval == 0:
+        losses = estimate_loss()
+        print(f"step {iter}: train loss {losses['train']:.4f}, val loss {losses['val']:.4f}")
 
     # sample a batch of data
     xb, yb = get_batch('train')
@@ -204,4 +206,8 @@ for iter in range(max_iters):
 
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
-print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
+
+with open("output.txt", "w") as f:
+    decoded = decode(m.generate(context, max_new_tokens=1000)[0].tolist())
+    print(decoded)
+    # f.write(decoded)
